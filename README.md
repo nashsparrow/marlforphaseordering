@@ -26,7 +26,7 @@ needs multiple occurrences of actions to provide a valid result
 
 ## Approach 1 - Using Multiple RL Agents with Different Rewards to Improve the Execution Time along with Code Size Reduction
 
-Below steps denotes the 1st appraoch we have used using MARL,
+The aim of this Approach is to Maximize a main reward along with a secondary reward. (Reducing the code size while improving the compilation time) Below steps denotes the 1st appraoch we have used using MARL,
 
 1. Train n number of RL agents (Candidate Agents) Agent_c1 , Agent_c2 , ..Agent_cn on a given environment env with their own copy of the environment and set their goal to improve the code reduction
 2. Train m number of RL agents (Candidate Agents) Agent_e1 , Agent_e2 , ..Agent_en on a given environment env (same env as the first step) with their own copy of the environment and set their goal to improve the execution time.
@@ -42,10 +42,25 @@ Below steps denotes the 1st appraoch we have used using MARL,
 
 5. The trained model provided by the main agent Agent_M is used to evaluate the goodness of the approach by using standard benchmarks.
 
-Reward function - R = α ∗ R_BinSize + β ∗ R_Throughput
-
-α - Size coefficient
-β - Througput coefficient
 
 ## Approach 2 - Using Multiple RL Agents with Split Action Space to Train Main RL Agent
 
+he aim of this Approach is tachieve a higher reward with fewer timesteps Below steps denotes the 1st appraoch we have used using MARL,
+
+1. Define the number of Candidate agents n and divide the full action space (A) into n number of sub sets. Currently, splitting of the action space is done randomly. n ∈ [1, 5].
+Complete Action Space : A ∈ {A1 , A2 , A3 , A5 ..An }
+Subsets: A1 ∈ {A4 , A6 ..}
+A2 ∈ {A5 , A7 , A100 ..}
+An ∈ {A1 , A9 , A120 ..An }
+
+2. Train n number of RL agents (Candidate Agents) Agentc1 , Agentc2 , ..Agentcn on a given environment env with their own copy of the environment and
+set their goal to improve the code reduction. The goal is integrated into the environment by setting the reward of the environment related to the
+code size reduction. When training each agent, the action space is limited to each action space subset which was generated in step 1.
+
+![](/assets/images/approach2.1.png)
+
+3. We use the trained Candidate Agents Agentc1 , Agentc2 , ..Agentcn to train the Main Agent Agent_M in a copy of the same environment. The goal of the Main Agent is to optimize the code reduction,and the reward calculation is set accordingly. We integrate the Candidate Agents by modifying the action space A_t of Agent_M . The action space in each time step t of Agent_M is set to the list of each prediction taken by each candidate agent for the observations and reward of the environment as shown below.
+
+![](/assets/images/approach2.2.png)
+
+4. The trained model provided by the main agent Agent_M is used to evaluate the goodness of the approach by using standard benchmarks.
