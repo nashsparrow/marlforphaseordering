@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+tests/
+results/
+charts/
+optuna-study.db
+best_hyperparameters.json

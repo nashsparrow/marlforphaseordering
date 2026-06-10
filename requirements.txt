@@ -1,0 +1,9 @@
+compiler-gym==0.2.5
+gym==0.26.2
+gymnasium==1.0.0
+matplotlib==3.10.0
+numpy==1.26.4
+optuna==4.2.0
+shimmy==2.0.0
+stable-baselines3==2.4.1
+torch==2.3.0

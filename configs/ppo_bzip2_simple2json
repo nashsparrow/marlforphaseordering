@@ -1,0 +1,21 @@
+{
+  "name": "ppo_bzip2_simple",
+  "algorithm": "PPO",
+  "train_benchmark": "cbench-v1/bzip2",
+  "evaluation_benchmarks": [
+    "cbench-v1/qsort",
+    "cbench-v1/susan"
+  ],
+  "observation_space": "Autophase",
+  "total_timesteps": 1000,
+  "evaluation_interval": 100,
+  "evaluation_episodes": 10,
+  "max_episode_steps": 30,
+  "layer_nodes": 128,
+  "layer_count": 4,
+  "seed": 10,
+  "deterministic_evaluation": true,
+  "save_checkpoints": false,
+  "output_dir": "results",
+  "hyperparameters": {}
+}

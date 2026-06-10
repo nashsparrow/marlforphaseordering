@@ -64,3 +64,204 @@ code size reduction. When training each agent, the action space is limited to ea
 ![](/assets/images/approach2.2.png)
 
 4. The trained model provided by the main agent Agent_M is used to evaluate the goodness of the approach by using standard benchmarks.
+
+## Implementation and Evaluation
+
+Framework used : CompilerGym , Stable Baselines3
+HyperParameter Tuning : Optuna
+Used RL Algorithms : PPO.
+
+I have implemented a generic python script that can be modified for different parameters in ScriptsToGenerateBasicRLModelsWithDifferentConfig/ExperimentalSetup.py
+### Base case
+
+Environment : LLVM
+
+Action Space : Entire Action Space
+
+Reward : InstCount
+
+Observation Space : Autophase
+
+RL Algorithm : PPO
+
+Trained timesteps : 20000 (at most 500 full-length 40-action episodes)
+
+Action Count for a Sequence : 40
+
+Fully Connected Layers : 4, with 64 nodes for each layer
+
+Hyperparameters : Default without tuning
+
+Training Data Set : cBench/Bzip2
+
+**Evaluation**
+
+Training and evaluation use separate environment
+instances, and evaluation data is written under `results/<name>/seed_<seed>/`
+with:
+
+- Per-episode measurements in `evaluation_episodes.csv`.
+- Mean, median, standard deviation, and 95% confidence intervals in
+  `evaluation_summary.csv`.
+- The complete configuration, package versions, platform, and LLVM version in
+  `metadata.json`.
+- Requested and actual SB3 timestep counts in `run_summary.json`.
+
+Each evaluation summary also records the actual number of training episodes
+completed at that checkpoint.
+
+PPO and A2C complete whole rollout buffers, so their actual timestep count may
+slightly exceed the configured target. CSV checkpoints and model filenames use
+SB3's actual counter. Re-running the same experiment name and seed replaces its
+generated evaluation CSV files instead of mixing runs.
+
+Run the example configuration:
+
+```bash
+python3 ScriptsToGenerateBasicRLModelsWithDifferentConfig/ExperimentalSetup.py \
+  --config configs/ppo_bzip2.json
+```
+
+The final model is always saved as:
+
+```text
+results/<name>/seed_<seed>/<name>_<actual-timesteps>_steps.zip
+```
+
+Set `"save_checkpoints": true` in the JSON configuration, or add
+`--save-checkpoints` to the command, to save a model ZIP after every evaluation
+checkpoint.
+
+Load a saved model and evaluate it later:
+
+```bash
+python3 -m experiment.evaluate_saved \
+  --model results/ppo_bzip2/seed_0/ppo_bzip2_20480_steps.zip \
+  --benchmark cbench-v1/qsort \
+  --benchmark cbench-v1/susan \
+  --episodes 100
+```
+
+When `metadata.json` is beside the model, the evaluator automatically restores
+the algorithm, observation space, action limit, default benchmarks, seed, and
+evaluation settings. Use `--config configs/ppo_bzip2.json` when evaluating a
+model stored elsewhere.
+
+By default, loaded-model results are written to a timestamped directory:
+
+```text
+<model-directory>/manual_evaluations/<timestamp>/
+```
+
+Use `--output-dir` to choose a fixed location and `--stochastic` to sample
+actions instead of using deterministic predictions.
+
+The example uses Bzip2 only for training and uses separate cBench programs for
+validation. For final reporting, create a second configuration containing
+held-out test benchmarks and do not use those results to select architecture,
+hyperparameters, or sequence length.
+
+Run independent replications by changing `seed` in the configuration. At least
+five seeds should be used for reported results. Confidence intervals from one
+seed describe evaluation-episode variation; conclusions about training
+stability must aggregate independently trained seeds.
+
+Aggregate the final checkpoint from all `seed_*` directories:
+
+```bash
+python3 -m experiment.aggregate results/ppo_bzip2 \
+  --output results/ppo_bzip2/aggregate_seeds.csv
+```
+
+Plot code size and runtime against training timesteps:
+
+```bash
+python3 -m experiment.plot_results \
+  --result results/ppo_default \
+  --label "PPO Default" \
+  --result results/ppo_tuned \
+  --label "PPO Tuned" \
+  --measurement codesize \
+  --measurement runtime \
+  --output-dir charts/ppo_comparison
+```
+
+Each `--result` may point to an experiment folder containing `seed_*`
+directories, a single seed folder, or an `evaluation_summary.csv` file. When
+multiple seeds are found, values are averaged at each timestep and the shaded
+region shows the cross-seed 95% confidence interval.
+
+The script generates one chart per benchmark and measurement, for example:
+
+```text
+charts/ppo_comparison/cbench-v1-qsort_codesize_vs_timesteps.png
+charts/ppo_comparison/cbench-v1-qsort_runtime_vs_timesteps.png
+```
+
+Use only one measurement when needed:
+
+```bash
+python3 -m experiment.plot_results \
+  --result results/ppo_bzip2/seed_0 \
+  --measurement codesize \
+  --benchmark cbench-v1/qsort \
+  --output-dir charts/bzip2
+```
+
+Available options include `--no-ci`, `--format pdf`, `--format svg`,
+`--title-prefix`, and repeated `--benchmark` filters.
+
+Plot code size and runtime together on the same Y-axis:
+
+```bash
+python3 -m experiment.plot_results \
+  --result results/ppo_bzip2 \
+  --label "PPO" \
+  --measurement combined \
+  --runtime-scale 1000000 \
+  --output-dir charts/combined
+```
+
+In this mode, instruction count is plotted without transformation and runtime
+is plotted as `runtime x runtime-scale`. For example, `0.008` seconds becomes
+`8000` when the scale is `1000000`. The chart legend and Y-axis label include
+the multiplier so the scaled runtime is not confused with raw seconds.
+
+Tune PPO against validation benchmarks:
+
+```bash
+python3 HyperParameterTuning/HyperParameterTuning.py \
+  --config configs/ppo_bzip2.json \
+  --trial-seed 0 --trial-seed 1 --trial-seed 2
+```
+
+The Optuna study is persisted in SQLite and tunes learning rate, rollout steps,
+discount factor, GAE lambda, and clipping range. Copy the selected
+`hyperparameters` object into a frozen final experiment configuration before
+running held-out tests.
+
+hyperparameters could be added to experiments as following.
+
+```bash
+"hyperparameters": {
+    "learning_rate": 0.000215,
+    "n_steps": 768,
+    "gamma": 0.904995,
+    "gae_lambda": 0.88688,
+    "clip_range": 0.2
+  }
+  ```
+
+Evaluate a seeded random-search baseline with the same sequence length:
+
+```bash
+python3 -m experiment.random_baseline \
+  --benchmark cbench-v1/qsort \
+  --benchmark cbench-v1/susan \
+  --episodes 100 --max-episode-steps 40 --seed 0
+```
+
+Runtime results remain sensitive to system noise. Final runtime experiments
+should pin CPU affinity and frequency, include warm-up runs, repeat each
+measurement, and report medians and confidence intervals alongside the exact
+hardware and software metadata.
