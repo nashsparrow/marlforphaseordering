@@ -1,0 +1,52 @@
+{
+  "name": "approach1_smoke",
+  "train_benchmark": "cbench-v1/bzip2",
+  "evaluation_benchmarks": [
+    "cbench-v1/bzip2"
+  ],
+  "observation_space": "InstCount",
+  "seed": 0,
+  "output_dir": "results",
+  "runtime_reward": "negative",
+  "candidates": [
+    {
+      "name": "runtime_short",
+      "objective": "runtime",
+      "max_episode_steps": 2,
+      "total_timesteps": 5,
+      "algorithm": "A2C",
+      "layer_nodes": 8,
+      "layer_count": 1,
+      "hyperparameters": {
+        "n_steps": 5
+      }
+    },
+    {
+      "name": "codesize_short",
+      "objective": "codesize",
+      "max_episode_steps": 2,
+      "total_timesteps": 5,
+      "algorithm": "A2C",
+      "layer_nodes": 8,
+      "layer_count": 1,
+      "hyperparameters": {
+        "n_steps": 5
+      }
+    }
+  ],
+  "main": {
+    "objective": "codesize",
+    "algorithm": "A2C",
+    "total_timesteps": 5,
+    "evaluation_interval": 5,
+    "evaluation_episodes": 1,
+    "max_episode_steps": 2,
+    "layer_nodes": 8,
+    "layer_count": 1,
+    "deterministic_candidates": true,
+    "deterministic_evaluation": true,
+    "hyperparameters": {
+      "n_steps": 5
+    }
+  }
+}

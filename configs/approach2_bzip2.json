@@ -1,0 +1,46 @@
+{
+  "name": "approach2_bzip2",
+  "train_benchmark": "cbench-v1/bzip2",
+  "evaluation_benchmarks": [
+    "cbench-v1/qsort",
+    "cbench-v1/susan"
+  ],
+  "observation_space": "Autophase",
+  "subset_count": 5,
+  "seed": 0,
+  "subset_seed": 0,
+  "output_dir": "results",
+  "candidate": {
+    "algorithm": "PPO",
+    "total_timesteps": 20000,
+    "max_episode_steps": 40,
+    "layer_nodes": 128,
+    "layer_count": 4,
+    "hyperparameters": {
+      "learning_rate": 0.0002,
+      "n_steps": 128,
+      "gamma": 0.91,
+      "gae_lambda": 0.92,
+      "clip_range": 0.2
+    }
+  },
+  "main": {
+    "algorithm": "PPO",
+    "total_timesteps": 20000,
+    "evaluation_interval": 1000,
+    "evaluation_episodes": 100,
+    "max_episode_steps": 40,
+    "layer_nodes": 128,
+    "layer_count": 4,
+    "deterministic_candidates": true,
+    "deterministic_evaluation": true,
+    "hyperparameters": {
+      "learning_rate": 0.0002,
+      "n_steps": 128,
+      "gamma": 0.91,
+      "gae_lambda": 0.92,
+      "clip_range": 0.2
+    }
+  }
+}
+

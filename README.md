@@ -42,6 +42,66 @@ The aim of this Approach is to Maximize a main reward along with a secondary rew
 
 5. The trained model provided by the main agent Agent_M is used to evaluate the goodness of the approach by using standard benchmarks.
 
+### Running Approach 1
+
+The generic Approach 1 configuration is
+`configs/approach1_bzip2.json`. It defines each candidate agent independently,
+including its objective, sequence length, training budget, architecture, and
+hyperparameters. The supplied configuration reproduces the thesis structure:
+
+- Runtime candidate with a 40-action sequence.
+- Runtime candidate with a 5-action sequence.
+- Code-size candidate with a 40-action sequence.
+- Code-size candidate with a 5-action sequence.
+
+Run it with:
+
+```bash
+python3 Approach1/Run_Approach1.py \
+  --config configs/approach1_bzip2.json
+```
+
+At each main-agent timestep, the main action selects one candidate agent. That
+candidate observes the current main environment state and predicts an LLVM
+optimization pass. The predicted LLVM pass, rather than the candidate index,
+is then applied to the main environment.
+
+Results are written to:
+
+```text
+results/approach1_bzip2/seed_0/
+```
+
+The directory contains:
+
+- `children/*.zip`: every trained candidate model.
+- `approach1_bzip2_main_<timesteps>_steps.zip`: final main selector model.
+- `evaluation_episodes.csv`: per-episode main-model evaluation data.
+- `evaluation_summary.csv`: timestep summaries compatible with
+  `experiment.plot_results`.
+- `metadata.json`: complete Approach 1 configuration and package versions.
+- `run_summary.json`: child and main model paths and actual timestep counts.
+
+The `runtime_reward` configuration supports:
+
+- `"negative"`: reward is negative absolute runtime, matching the original
+  Approach 1 script.
+- `"delta"`: reward is the runtime improvement from the previous state.
+
+Reload the saved main and child models for a later evaluation:
+
+```bash
+python3 Approach1/Evaluate_Approach1.py \
+  --run-dir results/approach1_bzip2/seed_0 \
+  --benchmark cbench-v1/qsort \
+  --episodes 100
+```
+
+The evaluator reconstructs the candidate-selector environment, loads every
+child model listed in `run_summary.json`, and then loads the main model. Its
+CSV output uses the same format as normal experiments and can be passed
+directly to `experiment.plot_results`.
+
 
 ## Approach 2 - Using Multiple RL Agents with Split Action Space to Train Main RL Agent
 
@@ -64,6 +124,56 @@ code size reduction. When training each agent, the action space is limited to ea
 ![](/assets/images/approach2.2.png)
 
 4. The trained model provided by the main agent Agent_M is used to evaluate the goodness of the approach by using standard benchmarks.
+
+### Running Approach 2
+
+The generic configuration is `configs/approach2_bzip2.json`. It reproduces the
+thesis structure with five candidate agents and one main selector agent:
+
+1. Discover the complete LLVM action space from CompilerGym.
+2. Shuffle all action IDs using `subset_seed`.
+3. Divide every action into balanced, disjoint random subsets.
+4. Train one candidate model using only the actions in its subset.
+5. Train the main model with one action per candidate.
+6. At each main timestep, the selected candidate predicts a local subset
+   action, which is mapped back to the corresponding LLVM action and executed.
+
+Run it with:
+
+```bash
+python3 Approach2/Run_Approach2.py \
+  --config configs/approach2_bzip2.json
+```
+
+Use a different `subset_seed` to generate another random partition, such as the
+two `Mc1` and `Mc2` rounds described in the thesis. Use a different experiment
+`name` to preserve both result sets.
+
+Results are written to:
+
+```text
+results/approach2_bzip2/seed_0/
+```
+
+The directory contains:
+
+- `action_subsets.json`: exact random subsets and subset seed.
+- `children/*.zip`: one trained candidate model per subset.
+- `approach2_bzip2_main_<timesteps>_steps.zip`: final main selector model.
+- `evaluation_episodes.csv` and `evaluation_summary.csv`.
+- `metadata.json` and `run_summary.json`.
+
+Reload the children, subsets, and main model for later evaluation:
+
+```bash
+python3 Approach2/Evaluate_Approach2.py \
+  --run-dir results/approach2_bzip2/seed_0 \
+  --benchmark cbench-v1/qsort \
+  --episodes 100
+```
+
+Approach 2 summaries use the standard result schema and can be compared against
+the baseline and Approach 1 using `experiment.plot_results`.
 
 ## Implementation and Evaluation
 
